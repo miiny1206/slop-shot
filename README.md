@@ -1,8 +1,19 @@
-# SlopShot
+<p align="center">
+  <img src="docs/icon.png" width="120" alt="SlopShot icon">
+</p>
 
-A native macOS screenshot & screen-recording tool, built from scratch in Swift to learn
-native macOS development. UX inspired by [CleanShot X](https://cleanshot.com) — original code,
-not a fork.
+<h1 align="center">SlopShot</h1>
+
+<p align="center">
+  A native macOS screenshot &amp; screen-recording tool, built from scratch in Swift.<br>
+  UX inspired by <a href="https://cleanshot.com">CleanShot X</a> — original code, not a fork.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/platform-macOS%2015%2B-blue" alt="macOS 15+">
+  <img src="https://img.shields.io/badge/Swift-SwiftUI%20%C2%B7%20AppKit-orange" alt="Swift">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT">
+</p>
 
 > Menu-bar app (no Dock icon). Everything is driven from the menu-bar `S` icon and global hotkeys.
 
