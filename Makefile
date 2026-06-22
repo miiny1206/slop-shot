@@ -2,8 +2,10 @@
 APP     = SlopShot
 CONFIG  = Debug
 BUILD   = build
-# cert self-signed cố định -> quyền macOS không bị reset mỗi lần build
-SIGN_ID = SlopShot Dev
+# Tự dò chữ ký: nếu Keychain có cert "SlopShot Dev" thì dùng (quyền macOS không
+# bị reset mỗi lần build); không có (máy người khác clone về) thì tự rơi về ad-hoc
+# "-" để build/cài được ngay, khỏi tạo cert. Ghi đè được: make install SIGN_ID="..."
+SIGN_ID := $(shell security find-identity -v -p codesigning 2>/dev/null | grep -q "SlopShot Dev" && echo "SlopShot Dev" || echo "-")
 APP_PATH = $(BUILD)/Build/Products/$(CONFIG)/$(APP).app
 
 .PHONY: gen build run clean install

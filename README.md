@@ -41,14 +41,18 @@ make install    # build Release → sign → copy to /Applications
 
 ### Code signing
 
-The `Makefile` re-signs with a **stable self-signed identity** (`SlopShot Dev`) so that the
-macOS Screen-Recording / Accessibility permissions stay granted across rebuilds.
+The `Makefile` **auto-detects** the signing identity, so a fresh clone just works:
 
-To build it yourself, either:
+- if a self-signed certificate named `SlopShot Dev` exists in your Keychain, it's used
+  (this keeps the macOS Screen-Recording / Accessibility permissions across rebuilds);
+- otherwise it falls back to **ad-hoc** signing (`-`) — builds and runs fine, but the
+  permissions reset on each rebuild. For a one-time install that's a non-issue.
 
-- create a self-signed certificate named `SlopShot Dev` in **Keychain Access**
-  (Certificate Assistant → *Create a Certificate…*, type *Code Signing*), **or**
-- set `SIGN_ID=-` in the `Makefile` for ad-hoc signing (permissions reset on each rebuild).
+Override anytime: `make install SIGN_ID="Your Identity"`.
+
+Optional (to keep permissions stable across rebuilds): create a self-signed *Code Signing*
+certificate named `SlopShot Dev` in **Keychain Access** → Certificate Assistant →
+*Create a Certificate…*.
 
 The app is **not** sandboxed and is **not** notarized — it's intended for personal local use.
 A locally-built app has no quarantine flag, so Gatekeeper lets it run without warnings.
