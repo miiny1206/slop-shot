@@ -140,6 +140,18 @@ final class RegionSelectionController {
         let view = SelectionView(frame: NSRect(origin: .zero, size: screen.frame.size))
         view.scaleFactor = screen.backingScaleFactor
 
+        // completion chỉ được phép chạy ĐÚNG 1 lần. Nếu không, các sự kiện dồn
+        // nhau (Esc lúc đang kéo chuột, Esc nhấn 2 lần, Esc sát lúc thả chuột)
+        // có thể bắn callback 2 lần → withCheckedContinuation resume 2 lần →
+        // fatalError "continuation misuse" → CẢ APP TẮT. Guard 1-lần ở đây.
+        var finished = false
+        let finishOnce: (CGRect?) -> Void = { [weak self] rect in
+            guard !finished else { return }
+            finished = true
+            self?.cleanup()
+            completion(rect)
+        }
+
         let win = OverlayWindow(contentRect: screen.frame,
                                 styleMask: .borderless,
                                 backing: .buffered,
@@ -151,14 +163,8 @@ final class RegionSelectionController {
         win.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         win.contentView = view
 
-        view.onSelected = { [weak self] rect in
-            self?.cleanup()
-            completion(rect)
-        }
-        view.onCancel = { [weak self] in
-            self?.cleanup()
-            completion(nil)
-        }
+        view.onSelected = { rect in finishOnce(rect) }
+        view.onCancel = { finishOnce(nil) }
 
         // Hiện ở alpha 0 trước, ÉP vẽ xong lớp dim, rồi mới fade lên nhanh.
         // Nếu order-front ngay ở alpha 1, cửa sổ kịp lộ 1 frame ĐEN trước khi
