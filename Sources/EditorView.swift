@@ -81,6 +81,7 @@ struct EditorView: View {
     @State private var zoomBase: CGFloat = 1           // zoom lúc bắt đầu pinch (neo cử chỉ)
     @State private var annotations: [Annotation] = []
     @State private var redoStack: [Annotation] = []   // các nét đã undo, chờ redo
+    @State private var clearedBackup: [Annotation]?   // ảnh chụp annotation lúc bấm Clear (để Undo khôi phục cả loạt)
     @State private var keyMonitor: Any?               // theo dõi ⌘Z/⌘⇧Z/⌘V khi editor mở
     @State private var dragStartNorm: CGPoint?        // điểm trước đó khi kéo bằng Select
     @State private var dragTargetID: UUID?            // layer đang bị kéo
@@ -180,7 +181,7 @@ struct EditorView: View {
         let bottomRight = CGPoint(x: 0.5 + nw / 2, y: 0.5 + nh / 2)
         annotations.append(Annotation(tool: .image, color: .clear, lineWidth: 0,
                                       points: [topLeft, bottomRight], image: img))
-        redoStack.removeAll()
+        redoStack.removeAll(); clearedBackup = nil
         tool = .select   // chuyển sang Select để kéo chỉnh vị trí ảnh ngay
         status = "Pasted image"
         return true
@@ -211,6 +212,13 @@ struct EditorView: View {
     }
 
     private func undo() {
+        // Vừa bấm Clear (canvas trống) → Undo khôi phục NGUYÊN loạt vừa xóa.
+        if annotations.isEmpty, let backup = clearedBackup {
+            annotations = backup
+            clearedBackup = nil
+            status = ""
+            return
+        }
         guard !annotations.isEmpty else { return }
         redoStack.append(annotations.removeLast())
     }
@@ -218,6 +226,20 @@ struct EditorView: View {
     private func redo() {
         guard !redoStack.isEmpty else { return }
         annotations.append(redoStack.removeLast())
+    }
+
+    // Xóa SẠCH annotation trong 1 lần (đỡ phải Undo từng nét). Lưu lại loạt vừa
+    // xóa vào clearedBackup → Undo (⌘Z) khôi phục nguyên trạng.
+    private func clearAll() {
+        guard !annotations.isEmpty else { return }
+        let n = annotations.count
+        clearedBackup = annotations
+        annotations = []
+        redoStack = []
+        selectedID = nil
+        editingID = nil
+        current = nil
+        status = "Cleared \(n) annotation\(n == 1 ? "" : "s") — Undo (⌘Z) to restore"
     }
 
     // ── Responsive board: image scales to fit, rồi nhân thêm `zoom` ─────────
@@ -295,6 +317,7 @@ struct EditorView: View {
             colorControl
             widthControl
             undoButton
+            clearButton
             imageTransformControls   // luôn hiện: có chọn ảnh→đổi ảnh đó, không→đổi ảnh nền
             Spacer(minLength: 8)
             Button("Save as…") { saveAs() }
@@ -459,6 +482,21 @@ struct EditorView: View {
         .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 9))
         .disabled(annotations.isEmpty)
         .help("Undo")
+    }
+
+    // Xóa sạch annotation 1 phát (Undo khôi phục lại được).
+    private var clearButton: some View {
+        Button { clearAll() } label: {
+            Image(systemName: "trash")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Color(white: 0.85))
+                .frame(width: 32, height: 30)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 9))
+        .disabled(annotations.isEmpty)
+        .help("Clear all annotations")
     }
 
     // ── Bottom bar ─────────────────────────────────────────────────────────
@@ -726,7 +764,7 @@ struct EditorView: View {
                 // Bỏ nét quá ngắn (lỡ kéo nhẹ) → hết "chấm rác". Pen luôn giữ.
                 if let c = current, c.tool == .pen || Self.isBigEnough(c) {
                     annotations.append(c)
-                    redoStack.removeAll()   // vẽ nét mới → bỏ lịch sử redo
+                    redoStack.removeAll(); clearedBackup = nil   // vẽ nét mới → bỏ lịch sử redo/khôi phục
                 }
                 current = nil
             }
@@ -749,11 +787,11 @@ struct EditorView: View {
                     annotations.append(Annotation(tool: .counter, color: color,
                                                   lineWidth: lineWidth, points: [p],
                                                   number: nextCounter))
-                    redoStack.removeAll()
+                    redoStack.removeAll(); clearedBackup = nil
                 case .text:
                     let a = Annotation(tool: .text, color: color, lineWidth: lineWidth, points: [p])
                     annotations.append(a)
-                    redoStack.removeAll()
+                    redoStack.removeAll(); clearedBackup = nil
                     editingID = a.id
                     textFocused = true
                 default: break
