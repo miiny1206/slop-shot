@@ -265,12 +265,15 @@ struct EditorView: View {
                 .contentShape(Rectangle())
                 .gesture(drawGesture(size))
                 .simultaneousGesture(tapGesture(size))
-                .simultaneousGesture(magnifyGesture)
                 .padding(28)
                 // Nhỏ hơn viewport → căn giữa; lớn hơn → ScrollView tự cho cuộn.
                 .frame(minWidth: geo.size.width, minHeight: geo.size.height, alignment: .center)
             }
             .background(Color(white: 0.11))
+            // Pinch ở BẤT KỲ đâu trong khung (kể cả vùng xám quanh ảnh) đều zoom.
+            // Đặt trên ScrollView (có background phủ kín) nên hit-test cả viewport,
+            // không chỉ riêng vùng ảnh.
+            .simultaneousGesture(magnifyGesture)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(white: 0.11))
