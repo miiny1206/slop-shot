@@ -54,6 +54,13 @@ private struct DestinationTab: View {
 
     var body: some View {
         Form {
+            Section("Startup") {
+                Toggle("Launch SlopShot at login", isOn: Binding(
+                    get: { settings.launchAtLogin },
+                    set: { settings.setLaunchAtLogin($0) }
+                ))
+            }
+
             Section("Save location") {
                 HStack {
                     Image(systemName: "folder.fill").foregroundStyle(.secondary)

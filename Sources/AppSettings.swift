@@ -1,6 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 import ImageIO    // CGImageDestination — mã hoá được nhiều định dạng kể cả HEIC
+import ServiceManagement // SMAppService — đăng ký khởi động cùng máy
 
 // ─────────────────────────────────────────────────────────────────────────
 // Cấu hình app, lưu xuống UserDefaults (giống 1 store Zustand có persist).
@@ -62,6 +63,29 @@ final class AppSettings: ObservableObject {
     @Published var copyToClipboard: Bool   { didSet { d.set(copyToClipboard, forKey: K.copy) } }
     @Published var showThumbnail: Bool     { didSet { d.set(showThumbnail, forKey: K.thumb) } }
     @Published var imageFormat: ImageFormat { didSet { d.set(imageFormat.rawValue, forKey: K.format) } }
+
+    // Không lưu UserDefaults — SMAppService.mainApp.status mới là nguồn sự thật
+    // (user có thể tắt thủ công trong System Settings > Login Items).
+    @Published private(set) var launchAtLogin: Bool = SMAppService.mainApp.status == .enabled
+
+    func setLaunchAtLogin(_ enabled: Bool) {
+        do {
+            if enabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+            launchAtLogin = enabled
+        } catch {
+            // Đăng ký thất bại (vd. đang chạy từ Xcode debug build) → giữ nguyên trạng thái cũ.
+            refreshLaunchAtLogin()
+        }
+    }
+
+    // Đồng bộ lại khi có khả năng trạng thái đã đổi ở nơi khác (mở lại Settings).
+    func refreshLaunchAtLogin() {
+        launchAtLogin = SMAppService.mainApp.status == .enabled
+    }
 
     // Phím tắt do user gán (theo action.rawValue). Thiếu key nào → dùng mặc định.
     @Published private var hotkeyStore: [String: Hotkey] {
